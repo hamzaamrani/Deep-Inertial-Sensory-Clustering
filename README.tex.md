@@ -1,4 +1,19 @@
 # Deep-Inertial-Sensory-Clustering
+
+
+Implementation of **Deep Inertial Sensory Clustering architecture** in **PyTorch**.
+
+For major details read **Section 4.2** of [https://github.com/hamzi27/Master-Thesis](https://github.com/hamzi27/Master-Thesis).
+
+The proposed DL-based Clustering architecture is summarized in the following figure:
+
+![Deep Inertial Sensory Clustering architecture](architecture.png)
+
+
+## Contact me
+If you have any questions regarding my master's thesis, contact me at hamza.amrani@unimib.it
+
+<!---
 ## Architecture
 
 
@@ -14,7 +29,7 @@ The \emph{proposed RNN-AE architecture} consists of three RNNs: the encoder Conv
 The recurrent encoder $Enc_{\theta}$ takes as input a  raw multi-channel sensor sequence and learns a compacted latent representation to encode the spatio-temporal features of an Activity of Daily Living. 
 In particular, a bi-directional Convolutional Gated Recurrent Unit (ConvGRU), an RNN that combines Gated Recurrent Units (GRUs) with the convolution operation, reads the sensory windowed sequence x in both forward and backward directions. It updates its hidden internal state in each time step according to the received input. The following equations give the update rule for input `x_t` and the previous output $h_{t-1}$:
 
-<img src="https://latex.codecogs.com/svg.latex?\Large&space;z_t=\sigma(W_z\star_n[h_{t-1};x_t]+b_z)" title="\Large z_t = \sigma(W_z \star_n [h_{t-1};x_t]+b_z )" />
+<img src="https://latex.codecogs.com/svg.image?z_t=\sigma(W_z\star_n[h_{t-1};x_t]&plus;b_z)" title="z_t=\sigma(W_z\star_n[h_{t-1};x_t]+b_z)" />
 
 
 \begin{equation} 
@@ -137,3 +152,4 @@ The proposed DL-based Clustering architecture is summarized in the following Fig
   \caption{Proposed Deep Inertial Sensory Clustering architecture.}
   \label{fig:4proposedArchitecture}
 \end{figure*}
+-->
