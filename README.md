@@ -1,19 +1,20 @@
 # Deep-Inertial-Sensory-Clustering
-
-The statement problem is defined as follow. Let us consider the Clustering problem of $n$ samples  of inertial signals readings, $X=\{x_1,x_2,...,x_n\}$ into $k$ clusters, each represented a human activity activity and represented by a centroid $\omega_j,j=1,...,k$.
+## Architecture
 
 
 In the following, the proposed architecture of this work is explained. The explanation is divided into two subsections: the \emph{Multi-Task AutoEncoder} employed and the \emph{Clustering Criterion} adopted.
 
-## Stage 1: Multi-Task AutoEncoder
+### Stage 1: Multi-Task AutoEncoder
 
 The \emph{proposed RNN-AE architecture} consists of three RNNs: the encoder ConvGRU and two conditional decoder GRUs~\cite{cho2014learning}. The input to the model is a multi-channel sensor sequence. The encoder ConvGRU reads in this sequence. After the last input has been read, the two decoders GRU takes over and outputs a prediction for the reconstructed sequence and the anticipated sequence.
 
 
-### Recurrent Encoder ($Enc_{\theta}$)
+#### Recurrent Encoder ($Enc_{\theta}$)
 
 The recurrent encoder $Enc_{\theta}$ takes as input a  raw multi-channel sensor sequence and learns a compacted latent representation to encode the spatio-temporal features of an Activity of Daily Living. 
-In particular, a bi-directional Convolutional Gated Recurrent Unit (ConvGRU), an RNN that combines Gated Recurrent Units (GRUs) with the convolution operation, reads the sensory windowed sequence x in both forward and backward directions. It updates its hidden internal state in each time step according to the received input. The following equations give the update rule for input $x_t$ and the previous output $h_{t-1}$:
+In particular, a bi-directional Convolutional Gated Recurrent Unit (ConvGRU), an RNN that combines Gated Recurrent Units (GRUs) with the convolution operation, reads the sensory windowed sequence x in both forward and backward directions. It updates its hidden internal state in each time step according to the received input. The following equations give the update rule for input `x_t` and the previous output $h_{t-1}$:
+
+<img src="https://latex.codecogs.com/svg.latex?\Large&space;z_t=\sigma(W_z\star_n[h_{t-1};x_t]+b_z)" title="\Large z_t = \sigma(W_z \star_n [h_{t-1};x_t]+b_z )" />
 
 
 \begin{equation} 
@@ -45,7 +46,7 @@ The resulting low-dimensional embedded feature $z \in \mathbb{R}^z$ encodes cont
 z_i=Enc_{\theta}(x_i)
 \end{equation}
 
-### Conditional Recurrent Decoders ($Dec_{\phi}$)
+#### Conditional Recurrent Decoders ($Dec_{\phi}$)
 The last hidden state of the encoder ConvGRU, after the dimensionality reduction, is the representation of the input sequence. The decoders GRU are being asked to reconstruct back the input sequence from this representation.
 A decoder can be of two kinds – \emph{conditional or unconditioned}. A conditional decoder (see Figure~\ref{fig:cond_dec}) receives the last generated output hidden state as input. An unconditioned decoder does not receive that input. Using a conditional decoder is beneficial for multiple reasons. It allows the decoder to model multiple modes in the target distribution.\\
 Moreover, if the decoder were given access to the last sequences while generating a particular sequence at training time, it would find it easy to pick up on these correlations. There would only be a minimal gradient that minimises the MSE requiring long-term knowledge about the input sequence. So, the input sequence is removed in a conditioned decoder, and the model is forced to look for information deep inside the encoder. 
@@ -73,7 +74,7 @@ The operations associated with decoding the embedded representation $z_i$ are su
 where $\bar{y}_i^{\;rec}$ and $\bar{y}_i^{\;fut}$ are the reconstructed and the anticipated sequences generated from the input $x_i$.
 
 
-### Non-Clustering Loss
+#### Non-Clustering Loss
 
 The \emph{objective} of the Recurrent AutoEncoder is a joint objective function:
 \begin{equation}
@@ -87,7 +88,7 @@ Instead, the \emph{optimal network parameters} of encoder $z_i=Enc_{\theta}(x_i)
 \end{equation}
 
 
-## Stage 2: Clustering Criterion
+### Stage 2: Clustering Criterion
 
 The reconstruction loss of the AutoEncoder is joined to the objective and optimized along with Clustering loss simultaneously, preserving the local structure of data generating distribution and avoiding the corruption of feature space.\\
 A parametrized Clustering network $f_{\mu}(.)$ is connected to the AutoEncoder's embedded layer, allowing the estimation of cluster assignment distributions and mapping each embedded point $z$ of input sequence $x$ into a soft label. Then, the Clustering loss $L_C$ is defined as \emph{Kullback-Leibler (KL) divergence} between the distribution of soft labels and the predefined target distribution. Optimizing the Clustering objective makes it possible to refine the feature space and force the network to have Clustering-friendly representations. In particular, the \emph{Cluster Assignment Hardening (CAH)} is used as a representative centroid-based approach for feature space refinement.
@@ -102,7 +103,7 @@ The optimal network parameters are optimized with respect to the global criterio
 \end{equation}
 In the following, the CAH adopted is described.
 
-### Cluster Assignment Hardening
+#### Cluster Assignment Hardening
 
 The Clustering objective uses the similarities between the data representations and cluster centroids as kernels to compute soft cluster assignments. Then, the CAH loss enforces the soft assignments to have more stringent probabilities.\\
 The Clustering network $f_{\mu}(.)$ mantains cluster centroids ${\mu_j \in \mathbb{R}^z}_{j=1}^k$ as trainable weights and maps each embedded point $z_i$ into soft label $Q_i = f_{\mu}(z_i) = (q_{ij})^k_{j=1}$ by following the Student's $t$-distribution:
