@@ -11,7 +11,7 @@ The proposed DL-based Clustering architecture is summarized in the following fig
 
 
 ## Contact me
-If you have any questions regarding my master's thesis, contact me at hamza.amrani@unimib.it
+If you have any questions regarding my work, contact me at hamza.amrani@unimib.it
 
 <!---
 ## Architecture
