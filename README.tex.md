@@ -73,7 +73,7 @@ The operations associated with decoding the embedded representation $z_i$ are su
 where $\bar{y}_i^{\;rec}$ and $\bar{y}_i^{\;fut}$ are the reconstructed and the anticipated sequences generated from the input $x_i$.
 
 
-## Non-Clustering Loss
+### Non-Clustering Loss
 
 The \emph{objective} of the Recurrent AutoEncoder is a joint objective function:
 \begin{equation}
@@ -87,8 +87,7 @@ Instead, the \emph{optimal network parameters} of encoder $z_i=Enc_{\theta}(x_i)
 \end{equation}
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Stage 2: Clustering Criterion}
+## Stage 2: Clustering Criterion
 
 The reconstruction loss of the AutoEncoder is joined to the objective and optimized along with Clustering loss simultaneously, preserving the local structure of data generating distribution and avoiding the corruption of feature space.\\
 A parametrized Clustering network $f_{\mu}(.)$ is connected to the AutoEncoder's embedded layer, allowing the estimation of cluster assignment distributions and mapping each embedded point $z$ of input sequence $x$ into a soft label. Then, the Clustering loss $L_C$ is defined as \emph{Kullback-Leibler (KL) divergence} between the distribution of soft labels and the predefined target distribution. Optimizing the Clustering objective makes it possible to refine the feature space and force the network to have Clustering-friendly representations. In particular, the \emph{Cluster Assignment Hardening (CAH)} is used as a representative centroid-based approach for feature space refinement.
@@ -103,7 +102,7 @@ The optimal network parameters are optimized with respect to the global criterio
 \end{equation}
 In the following, the CAH adopted is described.
 
-\subsubsection{Cluster Assignment Hardening}
+### Cluster Assignment Hardening
 
 The Clustering objective uses the similarities between the data representations and cluster centroids as kernels to compute soft cluster assignments. Then, the CAH loss enforces the soft assignments to have more stringent probabilities.\\
 The Clustering network $f_{\mu}(.)$ mantains cluster centroids ${\mu_j \in \mathbb{R}^z}_{j=1}^k$ as trainable weights and maps each embedded point $z_i$ into soft label $Q_i = f_{\mu}(z_i) = (q_{ij})^k_{j=1}$ by following the Student's $t$-distribution:
@@ -133,7 +132,7 @@ The proposed DL-based Clustering architecture is summarized in the following Fig
 
 \begin{figure*}[h]
   \centering
-  \includegraphics[width=0.9\textwidth]{contents/4deepClustering/images/architecture.png}
+  \includegraphics[width=0.9\textwidth]{architecture.png}
   \caption{Proposed Deep Inertial Sensory Clustering architecture.}
   \label{fig:4proposedArchitecture}
 \end{figure*}
