@@ -7,7 +7,7 @@ For major details read [Unsupervised Deep Learning-based clustering for Human Ac
 
 The proposed DL-based Clustering architecture is summarized in the following figure:
 
-![Deep Inertial Sensory Clustering architecture](architecture.png)
+![Deep Inertial Sensory Clustering architecture](DISC_architecture.png)
 
 
 ## Citation
