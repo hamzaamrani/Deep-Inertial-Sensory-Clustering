@@ -1,6 +1,8 @@
-# Deep Inertial Sensory Clustering
-# Hamza Amrani 2021
-
+# Implementation of paper: Unsupervised Deep Learning-based clustering for Human Activity Recognition
+# Authors: Hamza Amrani, Daniela Micucci, Paolo Napoletano
+# Department of Informatics, Systems and Communication
+# University of Milano - Bicocca , Milan, Italy
+# Email: h.amrani@campus.unimib.it, daniela.micucci@unimib.it, paolo.napoletano@unimib.it
 
 import os
 import time
@@ -19,7 +21,6 @@ import torchvision.transforms as transforms
 
 from sklearn.cluster import MiniBatchKMeans, KMeans, AgglomerativeClustering
 from sklearn.neighbors import NearestCentroid
-
 from sklearn.metrics import normalized_mutual_info_score, adjusted_rand_score
 
 import convolutional_rnn
@@ -28,39 +29,8 @@ device = torch.device("cuda" if torch.cuda.is_available()  else "cpu")
 torch.cuda.set_device(0)
 torch.cuda.empty_cache()
 
-def paint(text, color="green"):
-    """
-    :param text: string to be formatted
-    :param color: color used for formatting the string
-    :return:
-    """
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKGREEN = "\033[92m"
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    ENDC = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
-
-    if color == "blue":
-        return OKBLUE + text + ENDC
-    elif color == "green":
-        return OKGREEN + text + ENDC
-
 nmi = normalized_mutual_info_score
-
 def cluster_acc(y_true, y_pred):
-    """
-    Calculate clustering accuracy. Require scikit-learn installed
-
-    # Arguments
-        y: true labels, numpy.array with shape `(n_samples,)`
-        y_pred: predicted labels, numpy.array with shape `(n_samples,)`
-
-    # Return
-        accuracy, in [0,1]
-    """
     y_true = y_true.astype(np.int64)
     assert y_pred.size == y_true.size
     D = max(y_pred.max(), y_true.max()) + 1
@@ -74,7 +44,6 @@ def cluster_acc(y_true, y_pred):
     row_ind, col_ind = linear_sum_assignment(w.max() - w)
     ind = np.concatenate((row_ind.reshape(-1, 1), col_ind.reshape(-1, 1)), axis=1)
     return sum([w[i, j] for i, j in ind]) * 1.0 / y_pred.size
-
 
 class Encoder(nn.Module):
     def __init__(
@@ -211,7 +180,7 @@ class AE(nn.Module):
         self.fc3 = nn.Linear(self.enc_num_dir * enc_h_dim, dec_h_dim)
         self.bn3 = nn.BatchNorm1d(dec_h_dim)
 
-        # decoder
+        # decoders
         self.decoder_rec = DecoderRec(
             input_dim,
             dec_h_dim,
@@ -387,27 +356,27 @@ class DeepInertialSensoryClustering:
                     % (nmi(true_labels, y_pred), cluster_acc(true_labels, y_pred)))
 
     def pretrain(self,dataset,batch_size, epochs, pretrain_weights, cluster_method='kmeans'):
-        print(paint('START: DSC AutoEncoder pre-training...'))
+        print('START: DISC AutoEncoder pre-training...')
 
         train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=4, pin_memory=True,
                                                 shuffle=False)
-        dsc_ae = DISC_model(self.n_clusters, self.input_dim, self.hidden_dim, self.embedding_dim).cuda() #auto encoder
-        print(dsc_ae)
+        disc_ae = DISC_model(self.n_clusters, self.input_dim, self.hidden_dim, self.embedding_dim).cuda() #auto encoder
+        print(disc_ae)
 
         if pretrain_weights is not None:
-            dsc_ae.load_state_dict(torch.load(pretrain_weights))
+            disc_ae.load_state_dict(torch.load(pretrain_weights))
             print('Model found and loaded')
             with torch.no_grad():
                 print('Evaluation on AutoEncoding Space')
-                self.validateOnCompleteTestData(train_loader,dsc_ae,cluster_method)
+                self.validateOnCompleteTestData(train_loader,disc_ae,cluster_method)
             return
 
-        optimizer = torch.optim.Adam(dsc_ae.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(disc_ae.parameters(), lr=1e-3)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=70)
         start_time = time.time()
 
         print('\nPre-training...')
-        dsc_ae.train()
+        disc_ae.train()
         for epoch in range(epochs):
             scheduler.step()
             start_time_epoch = time.time()
@@ -431,7 +400,7 @@ class DeepInertialSensoryClustering:
                 input_fut = input_fut.cuda()
 
                 # forward
-                x_rec, x_fut, z = dsc_ae(x, input_rec, input_fut, 0.0)
+                x_rec, x_fut, z = disc_ae(x, input_rec, input_fut, 0.0)
                 loss_rec = F.mse_loss(x_rec, target_rec)
                 loss_fut = F.mse_loss(x_fut, target_fut)
                 loss = loss_rec + loss_fut
@@ -448,7 +417,7 @@ class DeepInertialSensoryClustering:
                 running_loss += loss.item()
 
             # ===================log========================
-            len_loader = len(train_loader)#2#
+            len_loader = len(train_loader)
             print('epoch [{}/{}], lr: {}, \tloss: {:0.6f}, loss_rec: {:0.6f}, loss_fut: {:0.6f}, time: {:.2f}s'
                         .format(epoch + 1, epochs, optimizer.param_groups[0]['lr'],
                                 running_loss/len_loader, running_loss_rec/len_loader, running_loss_fut/len_loader,
@@ -457,7 +426,7 @@ class DeepInertialSensoryClustering:
             # ===================evaluation during training========================
             if epoch%20==0:
                 with torch.no_grad():
-                   self.validateOnCompleteTestData(train_loader,dsc_ae,cluster_method)
+                   self.validateOnCompleteTestData(train_loader,disc_ae,cluster_method)
 
         print('\nPre-training time: ',time.time() - start_time, 's')
 
@@ -465,14 +434,14 @@ class DeepInertialSensoryClustering:
         print('\nEvaluation on AutoEncoding Space')
         with torch.no_grad():
             for i in range(10):
-                self.validateOnCompleteTestData(train_loader,dsc_ae,cluster_method)
+                self.validateOnCompleteTestData(train_loader,disc_ae,cluster_method)
 
         print('\nSaving model...')
-        torch.save(dsc_ae.state_dict(), "ae_pretrain_train.pth")
-        print(paint('END: DSC AutoEncoder pre-training...'))
+        torch.save(disc_ae.state_dict(), "ae_pretrain_train.pth")
+        print('END: DISC AutoEncoder pre-training...')
 
     def fit(self, dataset,batch_size, tol=0.001, cluster_init='kmeans'):
-        print(paint('START: DSC Clustering ...'))
+        print('START: DISC Clustering ...')
 
         train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=4, pin_memory=True,
                                                 shuffle=False)
@@ -581,7 +550,7 @@ class DeepInertialSensoryClustering:
         else:
             torch.save(model.state_dict(), "disc_train_ward.pth")
 
-        print(paint('END: DSC AutoEncoder pre-training...'))
+        print('END: DISC AutoEncoder pre-training...')
 
     def run_on_test(self, dataset,batch_size, cluster_init='kmeans'):
         print('Running on Test!')
