@@ -587,3 +587,54 @@ class DeepInertialSensoryClustering:
         print('Evaluation on End-to-end Deep Clustering')
         print(' '*8 + '|==>  nmi: %.4f,  acc: %.4f  <==|'
             % (nmi(true_labels, y_pred), cluster_acc(true_labels, y_pred)))
+
+
+if __name__ == "__main__":
+    use_cuda = torch.cuda.is_available()
+
+    parser = argparse.ArgumentParser(description='train',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--batch_size', default=256, type=int)
+    parser.add_argument('--pretrain_epochs', default=100, type=int)
+    parser.add_argument('--train_epochs', default=2, type=int)
+    args = parser.parse_args()
+    batch_size = args.batch_size
+
+    from load_UCI_dataset import load_UCI_dataset, prepare_for_DSC
+    print("Loading dataset...")
+
+    x, x_test, y, y_test, labels = load_UCI_dataset(flatten=False)
+    x, x_inverted, x_future, x_test, x_test_inverted, x_test_future = prepare_for_DSC(x, x_test)
+
+    print('data shape: ', x.shape)
+
+    X_train = []
+    for i in range(x.shape[0]):
+        tmp = [x[i,:,:], x_inverted[i,:,:], x_future[i,:,:]]
+        X_train.append(tmp)
+    X_train = np.array(X_train)
+
+    tensor_x = torch.Tensor(X_train)
+    tensor_y = torch.Tensor(y)   
+
+    tensor_dataset = torch.utils.data.TensorDataset(tensor_x,tensor_y)
+    train_loader = torch.utils.data.DataLoader(
+                    dataset=tensor_dataset,
+                    num_workers=4, 
+                    pin_memory=True,
+                    batch_size=batch_size,
+                    drop_last=True,
+                    shuffle=True)
+    test_loader = torch.utils.data.DataLoader(
+                    dataset=tensor_dataset,
+                    num_workers=4, 
+                    pin_memory=True,
+                    batch_size=batch_size,
+                    drop_last=True,
+                    shuffle=False)
+
+    print("Deep Inertial Sensory Clustering")
+    
+    disc = DeepInertialSensoryClustering(num_classes=6, seq_len=64, n_features=9, gru_hidden_dim=256, embedding_dim=64,gamma=0.1)
+    disc.pretrain(train_loader, test_loader, args.pretrain_epochs)
+    disc.train(train_loader, test_loader, args.train_epochs)
