@@ -25,9 +25,12 @@ from sklearn.metrics import normalized_mutual_info_score, adjusted_rand_score
 
 import convolutional_rnn
 
+import warnings
+warnings.filterwarnings("ignore")
+
 device = torch.device("cuda" if torch.cuda.is_available()  else "cpu")
-torch.cuda.set_device(0)
-torch.cuda.empty_cache()
+#torch.cuda.set_device(0)
+#torch.cuda.empty_cache()
 
 nmi = normalized_mutual_info_score
 def cluster_acc(y_true, y_pred):
@@ -208,12 +211,12 @@ class AE(nn.Module):
         z = torch.tanh(self.bn1(self.fc1(enc_output)))
         hidden = torch.tanh(self.bn2(self.fc2(z)))
 
-        outputs_rec = torch.zeros(max_len_rec, bs, input_dim).cuda()
-        x_t_rec = torch.zeros(bs, input_dim).cuda()
+        outputs_rec = torch.zeros(max_len_rec, bs, input_dim)#.cuda()
+        x_t_rec = torch.zeros(bs, input_dim)#.cuda()
         hidden_rec = hidden.unsqueeze(0).repeat(2, 1, 1)
 
-        outputs_fut = torch.zeros(max_len_fut, bs, input_dim).cuda()
-        x_t_fut = torch.zeros(bs, input_dim).cuda()
+        outputs_fut = torch.zeros(max_len_fut, bs, input_dim)#.cuda()
+        x_t_fut = torch.zeros(bs, input_dim)#.cuda()
         hidden_fut = hidden.unsqueeze(0).repeat(2, 1, 1)
 
         for t in range(0, max_len_rec):
@@ -338,7 +341,7 @@ class DeepInertialSensoryClustering:
     def validateOnCompleteTestData(self,test_loader,model,cluster_method='kmeans'):
         to_eval = np.array([a
                             for batch_idx, (x,input_rec,input_fut,target,target_rec,target_fut,idx,) in enumerate(test_loader)
-                            for a in model(x.cuda(), input_rec.cuda(), input_fut.cuda(), 0.0)[-1].cpu().data.numpy()])
+                            for a in model(x, input_rec, input_fut, 0.0)[-1].cpu().data.numpy()]) # put cuda()
 
         true_labels = np.array([a
                         for batch_idx, (x,input_rec,input_fut,target,target_rec,target_fut,idx,) in enumerate(test_loader)
@@ -355,12 +358,12 @@ class DeepInertialSensoryClustering:
         print(' '*8 + '|==>  nmi: %.4f,  acc: %.4f  <==|'
                     % (nmi(true_labels, y_pred), cluster_acc(true_labels, y_pred)))
 
-    def pretrain(self,dataset,batch_size, epochs, pretrain_weights, cluster_method='kmeans'):
+    def pretrain(self,dataset,batch_size, epochs, pretrain_weights=None, cluster_method='kmeans'):
         print('START: DISC AutoEncoder pre-training...')
 
         train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=4, pin_memory=True,
                                                 shuffle=False)
-        disc_ae = DISC_model(self.n_clusters, self.input_dim, self.hidden_dim, self.embedding_dim).cuda() #auto encoder
+        disc_ae = DISC_model(self.n_clusters, self.input_dim, self.hidden_dim, self.embedding_dim)#.cuda() #auto encoder
         print(disc_ae)
 
         if pretrain_weights is not None:
@@ -393,11 +396,11 @@ class DeepInertialSensoryClustering:
                             idx,
                         ) in enumerate(train_loader):
 
-                x = x.cuda()
-                target_rec = target_rec.cuda()
-                input_rec = input_rec.cuda()
-                target_fut = target_fut.cuda()
-                input_fut = input_fut.cuda()
+                x = x#.cuda()
+                target_rec = target_rec#.cuda()
+                input_rec = input_rec#.cuda()
+                target_fut = target_fut#.cuda()
+                input_fut = input_fut#.cuda()
 
                 # forward
                 x_rec, x_fut, z = disc_ae(x, input_rec, input_fut, 0.0)
@@ -446,15 +449,15 @@ class DeepInertialSensoryClustering:
         train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=4, pin_memory=True,
                                                 shuffle=False)
         print("Step 1: load pretrained model")
-        model = DISC_model(self.n_clusters, self.input_dim, self.hidden_dim, self.embedding_dim).cuda()
+        model = DISC_model(self.n_clusters, self.input_dim, self.hidden_dim, self.embedding_dim)#.cuda()
         model.setPretrain(False)
-        model.load_state_dict(torch.load("h_mh_ae_pretrain_train.pth"))
+        model.load_state_dict(torch.load("ae_pretrain_train.pth"))
 
         print ("Step 2: initialize cluster centers")
         with torch.no_grad():
             encoder_pred = np.array([a
                                 for batch_idx, (x,input_rec,input_fut,target,target_rec,target_fut,idx,) in enumerate(train_loader)
-                                for a in model.encode(x.cuda(), input_rec.cuda(), input_fut.cuda()).cpu().data.numpy()])
+                                for a in model.encode(x, input_rec, input_fut).cpu().data.numpy()]) #.cuda()
 
             true_labels = np.array([a
                             for batch_idx, (x,input_rec,input_fut,target,target_rec,target_fut,idx,) in enumerate(train_loader)
@@ -490,7 +493,7 @@ class DeepInertialSensoryClustering:
             with torch.no_grad():
                 q = np.array([a
                         for batch_idx, (x,input_rec,input_fut,target,target_rec,target_fut,idx,) in enumerate(train_loader)
-                        for a in model(x.cuda(), input_rec.cuda(), input_fut.cuda())[2].cpu().data.numpy()])
+                        for a in model(x, input_rec, input_fut)[2].cpu().data.numpy()]) # 
             y_pred = q.argmax(1)
 
             # evaluate the clustering performance
@@ -512,11 +515,11 @@ class DeepInertialSensoryClustering:
 
             for batch_idx, (x,input_rec,input_fut,target,target_rec,target_fut,idx,) in enumerate(train_loader):
                 # train on batch
-                x = x.cuda()
-                target_rec = target_rec.cuda()
-                input_rec = input_rec.cuda()
-                target_fut = target_fut.cuda()
-                input_fut = input_fut.cuda()
+                x = x#.cuda()
+                target_rec = target_rec#.cuda()
+                input_rec = input_rec#.cuda()
+                target_fut = target_fut#.cuda()
+                input_fut = input_fut#.cuda()
 
                 optimizer.zero_grad()
                 # forward
@@ -554,12 +557,12 @@ class DeepInertialSensoryClustering:
 
     def run_on_test(self, dataset,batch_size, cluster_init='kmeans'):
         print('Running on Test!')
-        model = DISC_model(self.n_clusters, self.input_dim, self.hidden_dim, self.embedding_dim).cuda()
+        model = DISC_model(self.n_clusters, self.input_dim, self.hidden_dim, self.embedding_dim)#.cuda()
         test_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=4, pin_memory=True,
                                                 shuffle=False)
         # Autoencoding space
         model.setPretrain(True)
-        model.load_state_dict(torch.load("h_mh_ae_pretrain_train.pth"))
+        model.load_state_dict(torch.load("ae_pretrain_train.pth"))
         with torch.no_grad():
             print('Evaluation on AutoEncoding Space')
             if cluster_init=='kmeans':
@@ -580,7 +583,7 @@ class DeepInertialSensoryClustering:
                             for a in target.cpu().numpy() ])
             q = np.array([a
                         for batch_idx, (x,input_rec,input_fut,target,target_rec,target_fut,idx,) in enumerate(test_loader)
-                        for a in model(x.cuda(), input_rec.cuda(), input_fut.cuda())[2].cpu().data.numpy()])
+                        for a in model(x, input_rec, input_fut)[2].cpu().data.numpy()]) #
         y_pred = q.argmax(1)
         true_labels = true_labels.reshape((true_labels.shape[0]))
 
@@ -590,8 +593,7 @@ class DeepInertialSensoryClustering:
 
 
 if __name__ == "__main__":
-    use_cuda = torch.cuda.is_available()
-
+    #use_cuda = torch.cuda.is_available()
     parser = argparse.ArgumentParser(description='train',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--batch_size', default=256, type=int)
@@ -604,37 +606,18 @@ if __name__ == "__main__":
     print("Loading dataset...")
 
     x, x_test, y, y_test, labels = load_UCI_dataset(flatten=False)
-    x, x_inverted, x_future, x_test, x_test_inverted, x_test_future = prepare_for_DSC(x, x_test)
+    x, x_inverted, x_future, x_test, x_test_inverted, x_test_future = prepare_for_DSC(x[:64,:,:], x_test)
 
-    print('data shape: ', x.shape)
+    tensor_x = torch.from_numpy(x[:64,:,:])
+    tensor_x_inverted = torch.from_numpy(x_inverted.copy()[:64,:,:])
+    tensor_x_future = torch.from_numpy(x_future[:64,:,:])
+    tensor_y = torch.Tensor(y[:64])   
+    tensor_idx = torch.Tensor(range(64))  
 
-    X_train = []
-    for i in range(x.shape[0]):
-        tmp = [x[i,:,:], x_inverted[i,:,:], x_future[i,:,:]]
-        X_train.append(tmp)
-    X_train = np.array(X_train)
+    tensor_dataset = torch.utils.data.TensorDataset(tensor_x,tensor_x_inverted,tensor_x_future,tensor_y,
+                                                    tensor_x_inverted,tensor_x_future,tensor_idx)
 
-    tensor_x = torch.Tensor(X_train)
-    tensor_y = torch.Tensor(y)   
-
-    tensor_dataset = torch.utils.data.TensorDataset(tensor_x,tensor_y)
-    train_loader = torch.utils.data.DataLoader(
-                    dataset=tensor_dataset,
-                    num_workers=4, 
-                    pin_memory=True,
-                    batch_size=batch_size,
-                    drop_last=True,
-                    shuffle=True)
-    test_loader = torch.utils.data.DataLoader(
-                    dataset=tensor_dataset,
-                    num_workers=4, 
-                    pin_memory=True,
-                    batch_size=batch_size,
-                    drop_last=True,
-                    shuffle=False)
-
-    print("Deep Inertial Sensory Clustering")
-    
-    disc = DeepInertialSensoryClustering(num_classes=6, seq_len=64, n_features=9, gru_hidden_dim=256, embedding_dim=64,gamma=0.1)
-    disc.pretrain(train_loader, test_loader, args.pretrain_epochs)
-    disc.train(train_loader, test_loader, args.train_epochs)
+    print("Deep Inertial Sensory Clustering")    
+    disc = DeepInertialSensoryClustering(n_clusters=6, input_dim=9, hidden_dim=256, embedding_dim=64, gamma=0.1, alpha=1.0)
+    disc.pretrain(tensor_dataset,args.batch_size, args.pretrain_epochs, cluster_method='kmeans')
+    disc.fit(tensor_dataset, args.batch_size, tol=0.001, cluster_init='kmeans')
